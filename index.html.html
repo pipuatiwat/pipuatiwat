@@ -1,0 +1,1019 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ระบบแผนที่โรงเรียน</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .mode-selector {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .mode-btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 25px;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+        }
+
+        .mode-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .mode-btn.active {
+            background: #ff6b6b;
+            transform: translateY(-2px);
+        }
+
+        .panel {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .user-panel, .admin-panel {
+            display: none;
+        }
+
+        .user-panel.active, .admin-panel.active {
+            display: block;
+        }
+
+        .search-section {
+            margin-bottom: 30px;
+        }
+
+        .search-box {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .search-input {
+            flex: 1;
+            padding: 12px 20px;
+            border: 2px solid #e0e0e0;
+            border-radius: 25px;
+            font-size: 16px;
+            outline: none;
+            transition: border-color 0.3s ease;
+        }
+
+        .search-input:focus {
+            border-color: #667eea;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 25px;
+            background: #667eea;
+            color: white;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+
+        .btn:hover {
+            background: #5a6fd8;
+            transform: translateY(-2px);
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+        }
+
+        .btn-secondary:hover {
+            background: #545b62;
+        }
+
+        .btn-danger {
+            background: #dc3545;
+        }
+
+        .btn-danger:hover {
+            background: #c82333;
+        }
+
+        .map-container {
+            position: relative;
+            width: 100%;
+            height: 500px;
+            border: 2px solid #e0e0e0;
+            border-radius: 15px;
+            overflow: hidden;
+            margin: 20px 0;
+            background: #f8f9fa;
+        }
+
+        .map-svg {
+            width: 100%;
+            height: 100%;
+            cursor: crosshair;
+        }
+
+        .room {
+            fill: #17a2b8;
+            stroke: #138496;
+            stroke-width: 2;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .room:hover {
+            fill: #ffc107;
+            stroke: #e0a800;
+        }
+
+        .room.start-point {
+            fill: #28a745;
+            stroke: #1e7e34;
+        }
+
+        .room.end-point {
+            fill: #dc3545;
+            stroke: #c82333;
+        }
+
+        .path {
+            stroke: #ff6b6b;
+            stroke-width: 3;
+            fill: none;
+            stroke-dasharray: 5,5;
+            animation: dash 1s linear infinite;
+        }
+
+        @keyframes dash {
+            to {
+                stroke-dashoffset: -10;
+            }
+        }
+
+        .room-label {
+            font-size: 12px;
+            fill: white;
+            text-anchor: middle;
+            pointer-events: none;
+            font-weight: bold;
+        }
+
+        .admin-form {
+            display: grid;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .form-group {
+            display: grid;
+            gap: 8px;
+        }
+
+        .form-group label {
+            font-weight: bold;
+            color: #495057;
+        }
+
+        .form-input {
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 16px;
+            outline: none;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-input:focus {
+            border-color: #667eea;
+        }
+
+        .rooms-list {
+            max-height: 200px;
+            overflow-y: auto;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 10px;
+            margin-top: 20px;
+        }
+
+        .room-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            border-bottom: 1px solid #e0e0e0;
+            cursor: pointer;
+        }
+
+        .room-item:hover {
+            background: #f8f9fa;
+        }
+
+        .room-item:last-child {
+            border-bottom: none;
+        }
+
+        .instructions {
+            background: #e7f3ff;
+            border: 1px solid #b3d9ff;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+
+        .instructions h4 {
+            color: #0056b3;
+            margin-bottom: 10px;
+        }
+
+        .instructions ul {
+            margin-left: 20px;
+        }
+
+        .instructions li {
+            margin-bottom: 5px;
+            color: #0056b3;
+        }
+
+        .status-message {
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+            text-align: center;
+        }
+
+        .success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+
+        .error {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+
+            .header h1 {
+                font-size: 2em;
+            }
+
+            .mode-selector {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            .search-box {
+                flex-direction: column;
+            }
+
+            .map-container {
+                height: 400px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🏫 ระบบแผนที่โรงเรียน</h1>
+            <p>ค้นหาและนำทางไปยังห้องเรียนต่างๆ</p>
+        </div>
+
+        <div class="mode-selector">
+            <button class="mode-btn active" onclick="switchMode('user')">👤 หน้าผู้ใช้</button>
+            <button class="mode-btn" onclick="switchMode('admin')">⚙️ หน้าแอดมิน</button>
+        </div>
+
+        <!-- User Panel -->
+        <div class="panel user-panel active">
+            <div class="search-section">
+                <h3>🔍 ค้นหาห้องเรียน</h3>
+                <div class="search-box">
+                    <input type="text" class="search-input" id="roomSearch" placeholder="พิมพ์ชื่อห้องเรียน เช่น ห้อง 101, ห้องคณิตศาสตร์">
+                    <button class="btn" onclick="searchRoom()">ค้นหา</button>
+                    <button class="btn btn-secondary" onclick="clearSearch()">ล้าง</button>
+                </div>
+                <div id="searchResults"></div>
+            </div>
+
+            <div class="instructions">
+                <h4>🗺️ วิธีใช้แผนที่</h4>
+                <ul>
+                    <li>คลิกที่ห้องเรียนเพื่อกำหนดจุดเริ่มต้น (สีเขียว)</li>
+                    <li>คลิกห้องอื่นเพื่อกำหนดปลายทาง (สีแดง)</li>
+                    <li>ระบบจะแสดงเส้นทางอัตโนมัติ</li>
+                    <li>ค้นหาห้องจากช่องค้นหาด้านบน</li>
+                </ul>
+            </div>
+
+            <div class="map-container">
+                <svg class="map-svg" id="schoolMap" viewBox="0 0 800 400">
+                    <!-- School Map Background -->
+                    <rect width="800" height="400" fill="#f0f8ff" stroke="#ddd" stroke-width="2"/>
+                    
+                    <!-- Building Outline -->
+                    <rect x="50" y="50" width="700" height="300" fill="none" stroke="#333" stroke-width="3"/>
+                    
+                    <!-- Corridors -->
+                    <rect x="50" y="180" width="700" height="40" fill="#e0e0e0" stroke="#ccc"/>
+                    <rect x="380" y="50" width="40" height="300" fill="#e0e0e0" stroke="#ccc"/>
+                    
+                    <!-- Default Rooms -->
+                    <g class="rooms-container">
+                        <!-- First Floor Rooms -->
+                        <rect class="room" data-room="101" x="70" y="70" width="80" height="60" rx="5"/>
+                        <text class="room-label" x="110" y="105">101</text>
+                        
+                        <rect class="room" data-room="102" x="170" y="70" width="80" height="60" rx="5"/>
+                        <text class="room-label" x="210" y="105">102</text>
+                        
+                        <rect class="room" data-room="103" x="270" y="70" width="80" height="60" rx="5"/>
+                        <text class="room-label" x="310" y="105">103</text>
+                        
+                        <rect class="room" data-room="201" x="440" y="70" width="80" height="60" rx="5"/>
+                        <text class="room-label" x="480" y="105">201</text>
+                        
+                        <rect class="room" data-room="202" x="540" y="70" width="80" height="60" rx="5"/>
+                        <text class="room-label" x="580" y="105">202</text>
+                        
+                        <rect class="room" data-room="203" x="640" y="70" width="80" height="60" rx="5"/>
+                        <text class="room-label" x="680" y="105">203</text>
+                        
+                        <!-- Second Floor Rooms -->
+                        <rect class="room" data-room="301" x="70" y="270" width="80" height="60" rx="5"/>
+                        <text class="room-label" x="110" y="305">301</text>
+                        
+                        <rect class="room" data-room="302" x="170" y="270" width="80" height="60" rx="5"/>
+                        <text class="room-label" x="210" y="305">302</text>
+                        
+                        <rect class="room" data-room="303" x="270" y="270" width="80" height="60" rx="5"/>
+                        <text class="room-label" x="310" y="305">303</text>
+                        
+                        <rect class="room" data-room="401" x="440" y="270" width="80" height="60" rx="5"/>
+                        <text class="room-label" x="480" y="305">401</text>
+                        
+                        <rect class="room" data-room="402" x="540" y="270" width="80" height="60" rx="5"/>
+                        <text class="room-label" x="580" y="305">402</text>
+                        
+                        <rect class="room" data-room="403" x="640" y="270" width="80" height="60" rx="5"/>
+                        <text class="room-label" x="680" y="305">403</text>
+                        
+                        <!-- Special Rooms -->
+                        <rect class="room" data-room="ห้องสมุด" x="70" y="150" width="100" height="80" rx="5"/>
+                        <text class="room-label" x="120" y="195">ห้องสมุด</text>
+                        
+                        <rect class="room" data-room="ห้องคอมพิวเตอร์" x="630" y="150" width="120" height="80" rx="5"/>
+                        <text class="room-label" x="690" y="195">ห้องคอม</text>
+                        
+                        <rect class="room" data-room="ห้องครู" x="280" y="150" width="80" height="80" rx="5"/>
+                        <text class="room-label" x="320" y="195">ห้องครู</text>
+                    </g>
+                    
+                    <!-- Path will be drawn here -->
+                    <g id="pathContainer"></g>
+                </svg>
+            </div>
+        </div>
+
+        <!-- Admin Panel -->
+        <div class="panel admin-panel">
+            <h3>⚙️ จัดการระบบแอดมิน</h3>
+            
+            <div class="instructions">
+                <h4>📝 วิธีการใช้งาน</h4>
+                <ul>
+                    <li>เชื่อมต่อกับ Google Sheets เพื่อจัดการข้อมูลห้องเรียน</li>
+                    <li>คลิกบนแผนที่เพื่อเพิ่มห้องใหม่</li>
+                    <li>แก้ไขข้อมูลห้องในฟอร์มด้านล่าง</li>
+                    <li>บันทึกการเปลี่ยนแปลงไปยัง Google Sheets</li>
+                </ul>
+            </div>
+
+            <div class="admin-form">
+                <div class="form-group">
+                    <label for="sheetsUrl">🔗 URL ของ Google Sheets</label>
+                    <input type="url" id="sheetsUrl" class="form-input" placeholder="https://docs.google.com/spreadsheets/d/...">
+                </div>
+                
+                <div class="form-group">
+                    <label for="apiKey">🔑 API Key</label>
+                    <input type="text" id="apiKey" class="form-input" placeholder="Google Sheets API Key">
+                </div>
+                
+                <button class="btn" onclick="connectGoogleSheets()">เชื่อมต่อ Google Sheets</button>
+            </div>
+
+            <div id="connectionStatus"></div>
+
+            <div class="admin-form">
+                <h4>📝 จัดการห้องเรียน</h4>
+                
+                <div class="form-group">
+                    <label for="roomName">ชื่อห้อง</label>
+                    <input type="text" id="roomName" class="form-input" placeholder="เช่น 101, ห้องคณิตศาสตร์">
+                </div>
+                
+                <div class="form-group">
+                    <label for="roomDescription">รายละเอียด</label>
+                    <input type="text" id="roomDescription" class="form-input" placeholder="รายละเอียดเพิ่มเติม">
+                </div>
+                
+                <div class="form-group">
+                    <label>ตำแหน่งบนแผนที่</label>
+                    <p>X: <span id="roomX">0</span>, Y: <span id="roomY">0</span></p>
+                    <p style="color: #666; font-size: 14px;">คลิกบนแผนที่เพื่อกำหนดตำแหน่ง</p>
+                </div>
+                
+                <button class="btn" onclick="addRoom()">เพิ่มห้องใหม่</button>
+                <button class="btn btn-secondary" onclick="updateRoom()">อัพเดทห้อง</button>
+                <button class="btn btn-danger" onclick="deleteRoom()">ลบห้อง</button>
+                <button class="btn" onclick="saveToSheets()">บันทึกไป Google Sheets</button>
+            </div>
+
+            <div class="rooms-list" id="roomsList">
+                <h4>รายการห้องทั้งหมด</h4>
+                <div id="roomsListContent"></div>
+            </div>
+
+            <div class="map-container">
+                <svg class="map-svg" id="adminMap" viewBox="0 0 800 400">
+                    <!-- Same as user map but with admin functionality -->
+                    <rect width="800" height="400" fill="#f0f8ff" stroke="#ddd" stroke-width="2"/>
+                    <rect x="50" y="50" width="700" height="300" fill="none" stroke="#333" stroke-width="3"/>
+                    <rect x="50" y="180" width="700" height="40" fill="#e0e0e0" stroke="#ccc"/>
+                    <rect x="380" y="50" width="40" height="300" fill="#e0e0e0" stroke="#ccc"/>
+                    
+                    <g class="admin-rooms-container">
+                        <!-- Admin rooms will be populated here -->
+                    </g>
+                </svg>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let currentMode = 'user';
+        let rooms = {};
+        let startRoom = null;
+        let endRoom = null;
+        let selectedRoomForEdit = null;
+        let googleSheetsConnected = false;
+        let clickPosition = { x: 0, y: 0 };
+
+        // Initialize default rooms
+        const defaultRooms = {
+            '101': { name: '101', x: 110, y: 100, description: 'ห้องเรียนชั้น ม.1' },
+            '102': { name: '102', x: 210, y: 100, description: 'ห้องเรียนชั้น ม.1' },
+            '103': { name: '103', x: 310, y: 100, description: 'ห้องเรียนชั้น ม.1' },
+            '201': { name: '201', x: 480, y: 100, description: 'ห้องเรียนชั้น ม.2' },
+            '202': { name: '202', x: 580, y: 100, description: 'ห้องเรียนชั้น ม.2' },
+            '203': { name: '203', x: 680, y: 100, description: 'ห้องเรียนชั้น ม.2' },
+            '301': { name: '301', x: 110, y: 300, description: 'ห้องเรียนชั้น ม.3' },
+            '302': { name: '302', x: 210, y: 300, description: 'ห้องเรียนชั้น ม.3' },
+            '303': { name: '303', x: 310, y: 300, description: 'ห้องเรียนชั้น ม.3' },
+            '401': { name: '401', x: 480, y: 300, description: 'ห้องเรียนชั้น ม.4' },
+            '402': { name: '402', x: 580, y: 300, description: 'ห้องเรียนชั้น ม.4' },
+            '403': { name: '403', x: 680, y: 300, description: 'ห้องเรียนชั้น ม.4' },
+            'ห้องสมุด': { name: 'ห้องสมุด', x: 120, y: 190, description: 'ห้องสมุดโรงเรียน' },
+            'ห้องคอมพิวเตอร์': { name: 'ห้องคอมพิวเตอร์', x: 690, y: 190, description: 'ห้องปฏิบัติการคอมพิวเตอร์' },
+            'ห้องครู': { name: 'ห้องครู', x: 320, y: 190, description: 'ห้องพักครู' }
+        };
+
+        // Initialize
+        rooms = { ...defaultRooms };
+        updateRoomsList();
+        renderAdminMap();
+
+        function switchMode(mode) {
+            // Update buttons
+            document.querySelectorAll('.mode-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+
+            // Update panels
+            document.querySelectorAll('.user-panel, .admin-panel').forEach(panel => {
+                panel.classList.remove('active');
+            });
+            document.querySelector(`.${mode}-panel`).classList.add('active');
+
+            currentMode = mode;
+
+            if (mode === 'admin') {
+                renderAdminMap();
+                setupAdminMapEvents();
+            } else {
+                setupUserMapEvents();
+            }
+        }
+
+        // User panel functions
+        function searchRoom() {
+            const query = document.getElementById('roomSearch').value.toLowerCase().trim();
+            const results = document.getElementById('searchResults');
+
+            if (!query) {
+                results.innerHTML = '<p style="color: #dc3545;">กรุณาพิมพ์ชื่อห้องที่ต้องการค้นหา</p>';
+                return;
+            }
+
+            const foundRooms = Object.entries(rooms).filter(([key, room]) => 
+                room.name.toLowerCase().includes(query) || 
+                room.description.toLowerCase().includes(query)
+            );
+
+            if (foundRooms.length === 0) {
+                results.innerHTML = '<p style="color: #dc3545;">ไม่พบห้องที่ค้นหา</p>';
+                return;
+            }
+
+            let html = '<h4>ผลการค้นหา:</h4><div style="display: grid; gap: 10px;">';
+            foundRooms.forEach(([key, room]) => {
+                html += `
+                    <div style="padding: 10px; border: 1px solid #ddd; border-radius: 5px; cursor: pointer; transition: all 0.3s ease;"
+                         onclick="selectRoomFromSearch('${key}')" 
+                         onmouseover="this.style.background='#f0f8ff'"
+                         onmouseout="this.style.background='white'">
+                        <strong>${room.name}</strong><br>
+                        <small style="color: #666;">${room.description}</small>
+                    </div>
+                `;
+            });
+            html += '</div>';
+            results.innerHTML = html;
+        }
+
+        function selectRoomFromSearch(roomKey) {
+            const room = rooms[roomKey];
+            if (!room) return;
+
+            // Highlight the room on map
+            const roomElement = document.querySelector(`[data-room="${roomKey}"]`);
+            if (roomElement) {
+                // Reset all rooms
+                document.querySelectorAll('.room').forEach(r => {
+                    r.classList.remove('start-point', 'end-point');
+                });
+
+                // Set as start point
+                roomElement.classList.add('start-point');
+                startRoom = roomKey;
+                
+                // Show success message
+                document.getElementById('searchResults').innerHTML = 
+                    `<div class="status-message success">เลือก "${room.name}" เป็นจุดเริ่มต้นแล้ว คลิกห้องอื่นเพื่อกำหนดปลายทาง</div>`;
+            }
+        }
+
+        function clearSearch() {
+            document.getElementById('roomSearch').value = '';
+            document.getElementById('searchResults').innerHTML = '';
+            
+            // Clear map selections
+            document.querySelectorAll('.room').forEach(room => {
+                room.classList.remove('start-point', 'end-point');
+            });
+            
+            startRoom = null;
+            endRoom = null;
+            clearPath();
+        }
+
+        function setupUserMapEvents() {
+            document.querySelectorAll('#schoolMap .room').forEach(room => {
+                room.onclick = function() {
+                    const roomKey = this.getAttribute('data-room');
+                    
+                    if (!startRoom) {
+                        // Set start point
+                        this.classList.add('start-point');
+                        startRoom = roomKey;
+                    } else if (!endRoom && roomKey !== startRoom) {
+                        // Set end point
+                        this.classList.add('end-point');
+                        endRoom = roomKey;
+                        drawPath();
+                    } else {
+                        // Reset and set new start
+                        document.querySelectorAll('#schoolMap .room').forEach(r => {
+                            r.classList.remove('start-point', 'end-point');
+                        });
+                        clearPath();
+                        this.classList.add('start-point');
+                        startRoom = roomKey;
+                        endRoom = null;
+                    }
+                };
+            });
+        }
+
+        function drawPath() {
+            if (!startRoom || !endRoom) return;
+
+            const startPos = rooms[startRoom];
+            const endPos = rooms[endRoom];
+            
+            if (!startPos || !endPos) return;
+
+            const pathContainer = document.getElementById('pathContainer');
+            pathContainer.innerHTML = `
+                <path class="path" d="M ${startPos.x} ${startPos.y} L ${endPos.x} ${endPos.y}" />
+                <circle cx="${startPos.x}" cy="${startPos.y}" r="5" fill="#28a745" />
+                <circle cx="${endPos.x}" cy="${endPos.y}" r="5" fill="#dc3545" />
+            `;
+        }
+
+        function clearPath() {
+            const pathContainer = document.getElementById('pathContainer');
+            if (pathContainer) {
+                pathContainer.innerHTML = '';
+            }
+        }
+
+        // Admin panel functions
+        function connectGoogleSheets() {
+            const url = document.getElementById('sheetsUrl').value;
+            const apiKey = document.getElementById('apiKey').value;
+            const statusDiv = document.getElementById('connectionStatus');
+
+            if (!url || !apiKey) {
+                statusDiv.innerHTML = '<div class="status-message error">กรุณากรอก URL และ API Key</div>';
+                return;
+            }
+
+            // Simulate connection (in real implementation, you would validate the connection)
+            statusDiv.innerHTML = '<div class="status-message success">เชื่อมต่อ Google Sheets สำเร็จ</div>';
+            googleSheetsConnected = true;
+        }
+
+        function renderAdminMap() {
+            const container = document.querySelector('.admin-rooms-container');
+            container.innerHTML = '';
+
+            Object.entries(rooms).forEach(([key, room]) => {
+                const roomElement = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                roomElement.setAttribute('class', 'room');
+                roomElement.setAttribute('data-room', key);
+                roomElement.setAttribute('x', room.x - 40);
+                roomElement.setAttribute('y', room.y - 30);
+                roomElement.setAttribute('width', '80');
+                roomElement.setAttribute('height', '60');
+                roomElement.setAttribute('rx', '5');
+                
+                const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                label.setAttribute('class', 'room-label');
+                label.setAttribute('x', room.x);
+                label.setAttribute('y', room.y + 5);
+                label.textContent = room.name.length > 8 ? room.name.substring(0, 8) + '...' : room.name;
+                
+                container.appendChild(roomElement);
+                container.appendChild(label);
+            });
+        }
+
+        function setupAdminMapEvents() {
+            const adminMap = document.getElementById('adminMap');
+            
+            // Handle map clicks for adding new rooms
+            adminMap.onclick = function(e) {
+                const rect = this.getBoundingClientRect();
+                const viewBox = this.viewBox.baseVal;
+                
+                const scaleX = viewBox.width / rect.width;
+                const scaleY = viewBox.height / rect.height;
+                
+                clickPosition.x = Math.round((e.clientX - rect.left) * scaleX);
+                clickPosition.y = Math.round((e.clientY - rect.top) * scaleY);
+                
+                document.getElementById('roomX').textContent = clickPosition.x;
+                document.getElementById('roomY').textContent = clickPosition.y;
+                
+                // Visual feedback
+                const existingDot = adminMap.querySelector('.temp-dot');
+                if (existingDot) existingDot.remove();
+                
+                const dot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                dot.setAttribute('class', 'temp-dot');
+                dot.setAttribute('cx', clickPosition.x);
+                dot.setAttribute('cy', clickPosition.y);
+                dot.setAttribute('r', '5');
+                dot.setAttribute('fill', '#ff6b6b');
+                adminMap.appendChild(dot);
+            };
+
+            // Handle room selection for editing
+            document.querySelectorAll('#adminMap .room').forEach(room => {
+                room.onclick = function(e) {
+                    e.stopPropagation();
+                    const roomKey = this.getAttribute('data-room');
+                    selectRoomForEdit(roomKey);
+                };
+            });
+        }
+
+        function selectRoomForEdit(roomKey) {
+            selectedRoomForEdit = roomKey;
+            const room = rooms[roomKey];
+            
+            if (room) {
+                document.getElementById('roomName').value = room.name;
+                document.getElementById('roomDescription').value = room.description;
+                document.getElementById('roomX').textContent = room.x;
+                document.getElementById('roomY').textContent = room.y;
+                clickPosition.x = room.x;
+                clickPosition.y = room.y;
+                
+                // Highlight selected room
+                document.querySelectorAll('#adminMap .room').forEach(r => {
+                    r.style.stroke = r.getAttribute('data-room') === roomKey ? '#ff6b6b' : '#138496';
+                    r.style.strokeWidth = r.getAttribute('data-room') === roomKey ? '4' : '2';
+                });
+            }
+        }
+
+        function addRoom() {
+            const name = document.getElementById('roomName').value.trim();
+            const description = document.getElementById('roomDescription').value.trim();
+            
+            if (!name) {
+                showStatus('error', 'กรุณากรอกชื่อห้อง');
+                return;
+            }
+            
+            if (rooms[name]) {
+                showStatus('error', 'มีห้องนี้อยู่แล้ว กรุณาใช้ชื่ออื่น');
+                return;
+            }
+            
+            if (clickPosition.x === 0 && clickPosition.y === 0) {
+                showStatus('error', 'กรุณาคลิกบนแผนที่เพื่อกำหนดตำแหน่ง');
+                return;
+            }
+            
+            rooms[name] = {
+                name: name,
+                x: clickPosition.x,
+                y: clickPosition.y,
+                description: description || 'ไม่มีรายละเอียด'
+            };
+            
+            renderAdminMap();
+            setupAdminMapEvents();
+            updateRoomsList();
+            clearForm();
+            showStatus('success', `เพิ่มห้อง "${name}" สำเร็จ`);
+        }
+
+        function updateRoom() {
+            if (!selectedRoomForEdit) {
+                showStatus('error', 'กรุณาเลือกห้องที่ต้องการแก้ไข');
+                return;
+            }
+            
+            const name = document.getElementById('roomName').value.trim();
+            const description = document.getElementById('roomDescription').value.trim();
+            
+            if (!name) {
+                showStatus('error', 'กรุณากรอกชื่อห้อง');
+                return;
+            }
+            
+            // If name changed, check for duplicates
+            if (name !== selectedRoomForEdit && rooms[name]) {
+                showStatus('error', 'มีห้องชื่อนี้อยู่แล้ว');
+                return;
+            }
+            
+            // Update room data
+            const oldRoom = rooms[selectedRoomForEdit];
+            const newRoom = {
+                name: name,
+                x: clickPosition.x || oldRoom.x,
+                y: clickPosition.y || oldRoom.y,
+                description: description || oldRoom.description
+            };
+            
+            // If name changed, delete old and create new
+            if (name !== selectedRoomForEdit) {
+                delete rooms[selectedRoomForEdit];
+            }
+            
+            rooms[name] = newRoom;
+            selectedRoomForEdit = name;
+            
+            renderAdminMap();
+            setupAdminMapEvents();
+            updateRoomsList();
+            showStatus('success', `อัพเดทห้อง "${name}" สำเร็จ`);
+        }
+
+        function deleteRoom() {
+            if (!selectedRoomForEdit) {
+                showStatus('error', 'กรุณาเลือกห้องที่ต้องการลบ');
+                return;
+            }
+            
+            if (confirm(`คุณแน่ใจหรือไม่ที่จะลบห้อง "${selectedRoomForEdit}"?`)) {
+                delete rooms[selectedRoomForEdit];
+                renderAdminMap();
+                setupAdminMapEvents();
+                updateRoomsList();
+                clearForm();
+                showStatus('success', `ลบห้อง "${selectedRoomForEdit}" สำเร็จ`);
+                selectedRoomForEdit = null;
+            }
+        }
+
+        function saveToSheets() {
+            if (!googleSheetsConnected) {
+                showStatus('error', 'กรุณาเชื่อมต่อ Google Sheets ก่อน');
+                return;
+            }
+            
+            // Simulate saving to Google Sheets
+            // In real implementation, you would use Google Sheets API
+            const data = Object.entries(rooms).map(([key, room]) => ({
+                name: room.name,
+                x: room.x,
+                y: room.y,
+                description: room.description
+            }));
+            
+            console.log('Data to save:', data);
+            showStatus('success', `บันทึกข้อมูล ${Object.keys(rooms).length} ห้องไป Google Sheets สำเร็จ`);
+            
+            // Here you would implement actual Google Sheets API call
+            // Example structure for the API call:
+            /*
+            const sheetsData = {
+                values: [
+                    ['ชื่อห้อง', 'X', 'Y', 'รายละเอียด'],
+                    ...data.map(room => [room.name, room.x, room.y, room.description])
+                ]
+            };
+            */
+        }
+
+        function updateRoomsList() {
+            const container = document.getElementById('roomsListContent');
+            
+            if (Object.keys(rooms).length === 0) {
+                container.innerHTML = '<p>ยังไม่มีห้องในระบบ</p>';
+                return;
+            }
+            
+            let html = '';
+            Object.entries(rooms).forEach(([key, room]) => {
+                html += `
+                    <div class="room-item" onclick="selectRoomForEdit('${key}')">
+                        <div>
+                            <strong>${room.name}</strong><br>
+                            <small style="color: #666;">${room.description}</small><br>
+                            <small style="color: #999;">ตำแหน่ง: (${room.x}, ${room.y})</small>
+                        </div>
+                        <div style="color: #667eea;">แก้ไข</div>
+                    </div>
+                `;
+            });
+            
+            container.innerHTML = html;
+        }
+
+        function clearForm() {
+            document.getElementById('roomName').value = '';
+            document.getElementById('roomDescription').value = '';
+            document.getElementById('roomX').textContent = '0';
+            document.getElementById('roomY').textContent = '0';
+            clickPosition = { x: 0, y: 0 };
+            selectedRoomForEdit = null;
+            
+            // Remove temp dot
+            const tempDot = document.querySelector('.temp-dot');
+            if (tempDot) tempDot.remove();
+            
+            // Reset room highlighting
+            document.querySelectorAll('#adminMap .room').forEach(r => {
+                r.style.stroke = '#138496';
+                r.style.strokeWidth = '2';
+            });
+        }
+
+        function showStatus(type, message) {
+            const statusDiv = document.getElementById('connectionStatus');
+            statusDiv.innerHTML = `<div class="status-message ${type}">${message}</div>`;
+            
+            // Auto clear after 3 seconds
+            setTimeout(() => {
+                statusDiv.innerHTML = '';
+            }, 3000);
+        }
+
+        // Initialize user map events on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            setupUserMapEvents();
+        });
+
+        // Search on Enter key
+        document.getElementById('roomSearch').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                searchRoom();
+            }
+        });
+
+        // Auto-complete search suggestions
+        document.getElementById('roomSearch').addEventListener('input', function() {
+            const query = this.value.toLowerCase().trim();
+            
+            if (query.length < 2) return;
+            
+            const suggestions = Object.entries(rooms)
+                .filter(([key, room]) => 
+                    room.name.toLowerCase().includes(query) || 
+                    room.description.toLowerCase().includes(query)
+                )
+                .slice(0, 5);
+                
+            if (suggestions.length > 0) {
+                this.style.borderColor = '#28a745';
+            } else {
+                this.style.borderColor = '#dc3545';
+            }
+        });
+
+        // Example Google Sheets integration function
+        /*
+        async function loadFromGoogleSheets() {
+            try {
+                const response = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/Sheet1!A:D?key=${API_KEY}`);
+                const data = await response.json();
+                
+                if (data.values && data.values.length > 1) {
+                    rooms = {};
+                    // Skip header row
+                    for (let i = 1; i < data.values.length; i++) {
+                        const [name, x, y, description] = data.values[i];
+                        if (name) {
+                            rooms[name] = {
+                                name: name,
+                                x: parseInt(x) || 0,
+                                y: parseInt(y) || 0,
+                                description: description || ''
+                            };
+                        }
+                    }
+                    renderAdminMap();
+                    updateRoomsList();
+                    showStatus('success', 'โหลดข้อมูลจาก Google Sheets สำเร็จ');
+                }
+            } catch (error) {
+                showStatus('error', 'เกิดข้อผิดพลาดในการโหลดข้อมูล: ' + error.message);
+            }
+        }
+        */
+    </script>
+</body>
+</html>
